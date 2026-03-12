@@ -51,6 +51,8 @@ Examples:
                         help="Delay between sends for bulk (default: 0)")
     parser.add_argument("-N", "--dsn", action="store_true",
                         help="Request Delivery Status Notification")
+    parser.add_argument("-o", "--timeout", type=int, default=10, metavar="SECONDS",
+                        help="SMTP connection timeout in seconds (default: 10)")
     parser.add_argument("-r", "--dry-run", dest="dry_run", action="store_true",
                         help="Validate inputs and print plan, no emails sent")
 
@@ -202,12 +204,16 @@ def classify_smtp_error(error_msg):
 # Task 6: SMTP sender
 # ---------------------------------------------------------------------------
 
-def smtp_send(smtp_server, from_addr, to_addr, msg, timeout=30):
+def smtp_send(smtp_server, from_addr, to_addr, msg, timeout=10):
     """
     Send a pre-built MIME message via SMTP port 25 (no auth).
     Returns (status, detail) where status is one of:
         Accepted, Rejected, Tenant Rejection, Connection Error, Failed
     """
+    # Apply timeout to DNS lookups too — socket.setdefaulttimeout covers
+    # getaddrinfo which smtplib's timeout parameter does not reach.
+    prev_timeout = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(timeout)
     try:
         with smtplib.SMTP(smtp_server, 25, timeout=timeout) as conn:
             conn.sendmail(from_addr, [to_addr], msg.as_string())
@@ -227,7 +233,7 @@ def smtp_send(smtp_server, from_addr, to_addr, msg, timeout=30):
     except (TimeoutError, socket.timeout):
         # Must be before OSError — TimeoutError is an OSError subclass
         return "Connection Error", (
-            "Connection timed out — port 25 may be blocked by your ISP or firewall"
+            f"Connection timed out after {timeout}s — port 25 may be blocked by your ISP or firewall"
         )
     except (ConnectionRefusedError, OSError):
         return "Connection Error", (
@@ -235,6 +241,8 @@ def smtp_send(smtp_server, from_addr, to_addr, msg, timeout=30):
         )
     except Exception as e:
         return "Failed", str(e)
+    finally:
+        socket.setdefaulttimeout(prev_timeout)
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +415,9 @@ def main():
                 print(f"  ERROR: {e}", file=sys.stderr)
                 sys.exit(1)
 
-            status, detail = smtp_send(smtp_server, args.from_addr, recipient, msg)
+            print(f"  [ ] Connecting {smtp_server}:25 -> {recipient} ...", end="", flush=True)
+            status, detail = smtp_send(smtp_server, args.from_addr, recipient, msg, timeout=args.timeout)
+            print("\r", end="")  # clear the connecting line
             logger.write(args.from_addr, recipient, args.subject, status, detail)
 
             if status == "Accepted":
