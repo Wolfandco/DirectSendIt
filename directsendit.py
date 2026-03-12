@@ -313,10 +313,16 @@ def dry_run_report(smtp_server, from_addr, recipients, subject,
 # ---------------------------------------------------------------------------
 
 def resolve_smtp_server(args):
-    """Return the SMTP server hostname from --domain or --server."""
+    """Return the SMTP server hostname from --domain or --server.
+
+    Dots in the domain slug are replaced with dashes so that both
+    'wolfandco.com' and 'wolfandco-com' produce the correct endpoint
+    'wolfandco-com.mail.protection.outlook.com'.
+    """
     if args.server:
         return args.server
-    return f"{args.domain}.mail.protection.outlook.com"
+    slug = args.domain.replace(".", "-")
+    return f"{slug}.mail.protection.outlook.com"
 
 
 def main():
