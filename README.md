@@ -18,6 +18,12 @@ sudo ./install.sh
 
 After install, `directsendit` is available system-wide.
 
+OR:
+
+Just run it via python:
+
+`python3 directsendit.py`
+
 ## Usage
 
 ```sh
