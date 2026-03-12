@@ -431,11 +431,17 @@ class TestDryRun:
 # ---------------------------------------------------------------------------
 
 class TestResolveSmtpServer:
-    def test_domain_builds_server(self, mod):
+    def test_domain_slug_builds_server(self, mod):
         class FakeArgs:
             domain = "contoso-com"
             server = None
         assert mod.resolve_smtp_server(FakeArgs()) == "contoso-com.mail.protection.outlook.com"
+
+    def test_domain_with_dots_converted_to_dashes(self, mod):
+        class FakeArgs:
+            domain = "wolfandco.com"
+            server = None
+        assert mod.resolve_smtp_server(FakeArgs()) == "wolfandco-com.mail.protection.outlook.com"
 
     def test_server_overrides_domain(self, mod):
         class FakeArgs:
