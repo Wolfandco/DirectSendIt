@@ -14,6 +14,8 @@ def parse_args(argv=None):
         epilog="""
 Examples:
   directsendit -f sender@co.com -t user@co.com -s "Hello" -H body.html -d contoso-com
+  directsendit -f sender@co.com -t user@co.com -s "Hello" -T "Hi there, this is the message body." -d contoso-com
+  directsendit -f sender@co.com -t user@co.com -s "Hello" -H "<p>Hello <b>world</b></p>" -d contoso-com
   directsendit -f sender@co.com -t recipients.txt -s "Hi" -H body.html -T body.txt -d contoso-com -a report.pdf
   directsendit -f sender@co.com -t user@co.com -s "Test" -H body.html -S mail.protection.outlook.com -r
         """,
@@ -27,8 +29,10 @@ Examples:
                         metavar="TEXT", help="Email subject")
 
     body = parser.add_argument_group("body (at least one required)")
-    body.add_argument("-H", "--html", metavar="FILE", help="Path to HTML body file")
-    body.add_argument("-T", "--text", metavar="FILE", help="Path to plain text body file")
+    body.add_argument("-H", "--html", metavar="FILE_OR_TEXT",
+                      help="HTML body: path to .html file, or inline HTML string")
+    body.add_argument("-T", "--text", metavar="FILE_OR_TEXT",
+                      help="Plain text body: path to .txt file, or inline text string")
 
     server = parser.add_argument_group("server (one required)")
     srv = server.add_mutually_exclusive_group()
@@ -285,8 +289,13 @@ def dry_run_report(smtp_server, from_addr, recipients, subject,
     for r in recipients:
         print(f"                {r}")
     print(f"  Subject     : {subject}")
-    print(f"  HTML body   : {html_path or '(none)'}")
-    print(f"  Text body   : {text_path or '(none)'}")
+    def _body_label(val):
+        if not val:
+            return "(none)"
+        return val if Path(val).exists() else "[inline text]"
+
+    print(f"  HTML body   : {_body_label(html_path)}")
+    print(f"  Text body   : {_body_label(text_path)}")
     if attachments:
         print(f"  Attachments : {len(attachments)}")
         for a in attachments:
@@ -316,21 +325,21 @@ def main():
     args = parse_args()
     smtp_server = resolve_smtp_server(args)
 
-    # Validate body files exist
+    # Load body — each flag accepts either a file path or inline text
     html_content = None
     text_content = None
     if args.html:
         hp = Path(args.html)
-        if not hp.exists():
-            print(f"ERROR: HTML file not found: {args.html}", file=sys.stderr)
-            sys.exit(1)
-        html_content = hp.read_text(encoding="utf-8")
+        if hp.exists():
+            html_content = hp.read_text(encoding="utf-8")
+        else:
+            html_content = args.html  # treat as inline HTML
     if args.text:
         tp = Path(args.text)
-        if not tp.exists():
-            print(f"ERROR: Text file not found: {args.text}", file=sys.stderr)
-            sys.exit(1)
-        text_content = tp.read_text(encoding="utf-8")
+        if tp.exists():
+            text_content = tp.read_text(encoding="utf-8")
+        else:
+            text_content = args.text  # treat as inline plain text
 
     # Validate attachments exist
     for attach in args.attach:

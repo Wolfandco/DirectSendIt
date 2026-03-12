@@ -442,3 +442,103 @@ class TestResolveSmtpServer:
             domain = "contoso-com"
             server = "custom.server.com"
         assert mod.resolve_smtp_server(FakeArgs()) == "custom.server.com"
+
+
+# ---------------------------------------------------------------------------
+# Inline body text tests
+# ---------------------------------------------------------------------------
+
+class TestInlineBody:
+    def test_inline_text_body_used_directly(self, mod, tmp_path):
+        """--text with a non-file string is used as inline content."""
+        args = mod.parse_args([
+            "-f", "a@b.com", "-t", "c@d.com", "-s", "Hi",
+            "-T", "Hello, this is the message body.",
+            "-d", "contoso-com",
+        ])
+        # Value passes through — main() will detect it's not a file
+        assert args.text == "Hello, this is the message body."
+
+    def test_inline_html_body_used_directly(self, mod, tmp_path):
+        """--html with a non-file string is used as inline HTML."""
+        args = mod.parse_args([
+            "-f", "a@b.com", "-t", "c@d.com", "-s", "Hi",
+            "-H", "<p>Hello <b>world</b></p>",
+            "-d", "contoso-com",
+        ])
+        assert args.html == "<p>Hello <b>world</b></p>"
+
+    def test_file_body_still_read_from_disk(self, mod, tmp_path):
+        """--text with an existing file path still reads the file."""
+        body = tmp_path / "body.txt"
+        body.write_text("File content here")
+        args = mod.parse_args([
+            "-f", "a@b.com", "-t", "c@d.com", "-s", "Hi",
+            "-T", str(body),
+            "-d", "contoso-com",
+        ])
+        assert args.text == str(body)
+
+    def test_inline_text_builds_valid_message(self, mod):
+        """Inline text string produces a valid MIME message."""
+        msg = mod.build_message(
+            from_addr="a@b.com",
+            to="c@d.com",
+            subject="Test",
+            html_content=None,
+            text_content="Hello, this is plain text.",
+            attachments=[],
+            dsn=False,
+        )
+        assert msg["Subject"] == "Test"
+        assert "Hello, this is plain text." in msg.get_payload(decode=True).decode()
+
+    def test_inline_html_builds_valid_message(self, mod):
+        """Inline HTML string produces a valid MIME message."""
+        msg = mod.build_message(
+            from_addr="a@b.com",
+            to="c@d.com",
+            subject="Test",
+            html_content="<p>Hello <b>world</b></p>",
+            text_content=None,
+            attachments=[],
+            dsn=False,
+        )
+        assert "<p>Hello <b>world</b></p>" in msg.get_payload(decode=True).decode()
+
+    def test_dry_run_shows_inline_label(self, mod, tmp_path, capsys):
+        """dry_run_report shows [inline text] when body value is not a file."""
+        mod.dry_run_report(
+            smtp_server="x.mail.protection.outlook.com",
+            from_addr="a@b.com",
+            recipients=["c@d.com"],
+            subject="Hi",
+            html_path="<p>inline html</p>",
+            text_path=None,
+            attachments=[],
+            dsn=False,
+            log_path=None,
+            delay=0,
+        )
+        out = capsys.readouterr().out
+        assert "[inline text]" in out
+
+    def test_dry_run_shows_filename_for_file(self, mod, tmp_path, capsys):
+        """dry_run_report shows file path when body value is an existing file."""
+        html = tmp_path / "body.html"
+        html.write_text("<p>x</p>")
+        mod.dry_run_report(
+            smtp_server="x.mail.protection.outlook.com",
+            from_addr="a@b.com",
+            recipients=["c@d.com"],
+            subject="Hi",
+            html_path=str(html),
+            text_path=None,
+            attachments=[],
+            dsn=False,
+            log_path=None,
+            delay=0,
+        )
+        out = capsys.readouterr().out
+        assert "body.html" in out
+        assert "[inline text]" not in out
