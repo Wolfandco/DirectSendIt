@@ -56,6 +56,15 @@ directsendit -f sender@company.com -t user@company.com -s "Hi" -H body.html -d c
 
 # Bulk send with delay between messages
 directsendit -f sender@company.com -t recipients.txt -s "Hi" -H body.html -d company-com -D 2
+
+# Inline HTML body (no file needed)
+directsendit -f sender@company.com -t user@company.com -s "Hi" -H "<p>Hello <b>world</b></p>" -d company-com
+
+# Inline plain text body
+directsendit -f sender@company.com -t user@company.com -s "Hi" -T "Hello, this is the message." -d company-com
+
+# Custom SMTP timeout (useful when port 25 is slow or filtered)
+directsendit -f sender@company.com -t user@company.com -s "Hi" -H body.html -d company-com -o 30
 ```
 
 ## Flags
@@ -65,8 +74,8 @@ directsendit -f sender@company.com -t recipients.txt -s "Hi" -H body.html -d com
 | `-f` | `--from` | Yes | Sender email address |
 | `-t` | `--to` | Yes | Recipient email address or path to `.txt` file (one per line) |
 | `-s` | `--subject` | Yes | Email subject line |
-| `-H` | `--html` | One of -H/-T | Path to HTML body file |
-| `-T` | `--text` | One of -H/-T | Path to plain text body file |
+| `-H` | `--html` | One of -H/-T | HTML body: path to `.html` file, or inline HTML string |
+| `-T` | `--text` | One of -H/-T | Plain text body: path to `.txt` file, or inline text string |
 | `-a` | `--attach` | No | Attachment file path (repeatable for multiple files) |
 | `-d` | `--domain` | One of -d/-S | Tenant slug, e.g. `company-com` — constructs SMTP server automatically |
 | `-S` | `--server` | One of -d/-S | Explicit SMTP server hostname |
@@ -74,6 +83,7 @@ directsendit -f sender@company.com -t recipients.txt -s "Hi" -H body.html -d com
 | `-n` | `--no-log` | No | Disable logging entirely |
 | `-D` | `--delay` | No | Seconds to wait between sends for bulk mode (default: 0) |
 | `-N` | `--dsn` | No | Request Delivery Status Notification headers |
+| `-o` | `--timeout` | No | SMTP connection timeout in seconds (default: 10) |
 | `-r` | `--dry-run` | No | Validate inputs and print send plan without sending |
 
 ## Recipients File Format
