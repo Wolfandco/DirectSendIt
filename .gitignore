@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets
+.env
+.env.*
+*.env
+secrets.json
+credentials.json
+config.local.*
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
