@@ -127,3 +127,7 @@ Results are written to a CSV with columns: `From, To, Subject, Status, Timestamp
 ## How Direct Send Works
 
 Direct Send connects to your Microsoft 365 tenant's inbound SMTP endpoint (`<tenant>.mail.protection.outlook.com`) on port 25 without authentication. It can only deliver to mailboxes within that M365 tenant. Your sending IP must be permitted by the tenant's connector configuration in Exchange Admin Center.
+
+## Credits
+
+Inspired by [Spoofing Microsoft 365 Like It's 1995](https://www.blackhillsinfosec.com/spoofing-microsoft-365-like-its-1995/) — Black Hills Information Security.
